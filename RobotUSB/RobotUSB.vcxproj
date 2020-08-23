@@ -155,7 +155,9 @@
     <ClCompile Include="RobotUSB.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Action.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="ScriptParse.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RobotUSB.rc" />
