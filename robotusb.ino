@@ -10,16 +10,13 @@
 
 void setup() 
 {
-  Serial.begin(9600);
-  Serial.setTimeout(0);
+  Serial.begin(115200);
+  Serial.setTimeout(10);
   Mouse.begin();
-  Serial.write("test3\n");
- // MouseClick(-460, -257, 0);
 }
 
 void MouseClick(int x, int y, int mclick)
-{
-  
+{  
   unsigned int xiter = abs(x)/MOUSE_FREQUENCY;
   unsigned int xremainder = abs(x) % xiter;
   unsigned int yiter = abs(y)/MOUSE_FREQUENCY;
@@ -39,7 +36,7 @@ void MouseClick(int x, int y, int mclick)
     Mouse.move(0, dy, 0);   
   }
   
-  Mouse.move(xremainder * xdir, yremainder * ydir, 0);
+  Mouse.move(xremainder * xdir, yremainder * ydir, 0);  
 
   if(mclick == MOUSE_LEFTCLICK)
   {
@@ -60,8 +57,10 @@ void KeyboardClick(char key)
 void loop() 
 {
   if(Serial.available() >= SERIAL_MESSAGE_SIZE)
-  {    
-    String serial_string = Serial.readString();
+  {  
+    char data[16];
+    Serial.readBytes(data, SERIAL_MESSAGE_SIZE);
+    String serial_string(data);
     char* saveptr = (char*)serial_string.c_str();
     char* token;
     int tokens[MAX_TOKEN_LENGTH];
@@ -82,5 +81,5 @@ void loop()
       KeyboardClick((char)tokens[1]);
     }
   }
-  delay(500);
+  delay(10);
 }
