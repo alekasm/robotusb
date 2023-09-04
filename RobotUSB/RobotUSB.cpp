@@ -10,10 +10,11 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <setupapi.h>
+#include <devguid.h>
 #define SERIAL_BUFFER_SIZE 16
 #define MOUSE_SPEED 2
-
-
+#pragma comment (lib, "SetupAPI")
 
 typedef bool(*ArgParseFunc)(const std::vector<std::string>&);
 bool ParseWindowOrigin(const std::vector<std::string>&);
@@ -22,7 +23,7 @@ namespace
 {
   volatile bool running = true;
   volatile bool interrupt = false;
-  volatile bool loop_bind_toggled = true; 
+  volatile bool loop_bind_toggled = true;
 }
 
 void ResetProgram()
@@ -42,31 +43,68 @@ std::vector<std::string> split_string(char, std::string);
 
 int main()
 {
-  printf("RobotUSB Version 3 | Aleksander Krimsky - www.krimsky.net\n");
-  printf("Please enter the COM port: ");
+  printf("RobotUSB Version 4 | Aleksander Krimsky - www.krimsky.net\n");
+
+  //Adapted from Jeffreys on StackOverflow
+  //https://stackoverflow.com/questions/58030553/
+
+  HDEVINFO hDevInfo;
+  SP_DEVINFO_DATA DeviceInfoData = { sizeof(DeviceInfoData) };
+  // get device class information handle
+  hDevInfo = SetupDiGetClassDevs(&GUID_DEVCLASS_PORTS, 0, 0, DIGCF_PRESENT);
+  if (hDevInfo == INVALID_HANDLE_VALUE)
+  {
+    printf("Failed to find COM ports.\n");
+    return 0;
+  }
+
+  for (int i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &DeviceInfoData); i++)
+  {
+    DWORD DataT;
+    char friendly_name[64] = { 0 };
+
+    if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &DeviceInfoData,
+      SPDRP_FRIENDLYNAME, &DataT, (PBYTE)friendly_name, sizeof(friendly_name), NULL))
+    {
+      continue;
+    }
+
+    friendly_name[63] = 0;
+    printf("%s\n", friendly_name);
+  }
+
+  enter_port:
+  printf("\nPlease enter the COM port: ");
   int port;
   std::cin >> port;
   printf("\n");
   if (std::cin.fail() || port < 0 || port > 256)
   {
-    printf("Invalid COM port!\n");
-    return 1;
+    printf("Invalid COM port: %d\n", port);
+    goto enter_port;
   }
   std::wstring pcCommPort = L"\\\\.\\COM";
   pcCommPort += std::to_wstring(port);
   HANDLE hCom = INVALID_HANDLE_VALUE;
   printf("Waiting for port to open on COM%d...\n", port);
-  while (hCom == INVALID_HANDLE_VALUE)
+  for(int i = 0; i < 6; ++i)
   {
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    Sleep(500);
     hCom = CreateFileW(pcCommPort.c_str(),
       GENERIC_READ | GENERIC_WRITE,
       0, NULL, OPEN_EXISTING, 0, NULL);
-    if (hCom == INVALID_HANDLE_VALUE)
+    if (hCom != INVALID_HANDLE_VALUE)
     {
-      printf("Code: %d\n", GetLastError());
+      break;
     }
   }
+
+  if (hCom == INVALID_HANDLE_VALUE)
+  {
+    printf("Failed to open port on COM%d\n", port);
+    goto enter_port;
+  }
+
   printf("Opened port on COM%d, setting CommState.\n", port);
 
   DCB dcb;
@@ -78,7 +116,7 @@ int main()
     return 2;
   }
 
-  dcb.BaudRate = CBR_9600;
+  dcb.BaudRate = CBR_115200;
   dcb.ByteSize = 8;
   dcb.Parity = NOPARITY;
   dcb.StopBits = ONESTOPBIT;
@@ -117,9 +155,12 @@ program_main:
     {
       if (Parameters::loop_count > 1)
       {
-        if (!running || interrupt)        
-          break;   
-        printf("Iterations remaining: %d\n", Parameters::loop_count - i);
+        if (!running || interrupt)
+        {
+          printf("\n");
+          break;
+        }
+        printf("\rIterations remaining: %d", Parameters::loop_count - i);
       }
       for (IOAction* action : action_vector)
       {
