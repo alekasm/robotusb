@@ -1,6 +1,4 @@
 #include <iostream>
-#include <conio.h>
-#include <Windows.h>
 #include "ScriptParse.h"
 #include "Action.h"
 #include <thread>
@@ -10,8 +8,7 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
-#include <setupapi.h>
-#include <devguid.h>
+
 #define SERIAL_BUFFER_SIZE 16
 #define MOUSE_SPEED 2
 #pragma comment (lib, "SetupAPI")
