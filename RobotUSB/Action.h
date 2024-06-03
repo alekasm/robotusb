@@ -2,6 +2,7 @@
 #include <string>
 #include <Windows.h>
 #include <cmath>
+#include "parameters.h"
 struct Color
 {
   unsigned char r, g, b;
@@ -77,6 +78,7 @@ struct MouseAction : public SerialAction
     std::string serial_write = "0,";
     int dx, dy;
     int dclick = click;
+#ifdef _WIN32
     if (use_color)
     {
       POINT point;
@@ -95,6 +97,7 @@ struct MouseAction : public SerialAction
       }
     }
     else
+#endif
     {
       dx = relative ? x : x - lpPoint.x;
       dy = relative ? y : y - lpPoint.y;

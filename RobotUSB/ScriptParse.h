@@ -4,41 +4,17 @@
 #include <map>
 #include <fstream>
 #include <iostream>
+#include <Windows.h>
+#include "Action.h"
+#include "parameters.h"
 //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 
-namespace Parameters
-{
-  int origin_x = 0;
-  int origin_y = 0;
-  unsigned int screen_width = 0;
-  unsigned int screen_height = 0;
-  unsigned int loop_count = 1;
-  unsigned int delay_each_action = 0;
-  DWORD loop_bind = NULL;
-  DWORD loop_bind_toggle = NULL;
-  DWORD end_script = VK_F5;
-}
 
-#include "Action.h"
 
 namespace
 {
   std::vector<IOAction*> action_vector;
 }
-
-void ResetParameters()
-{
-  Parameters::origin_x = 0;
-  Parameters::origin_y = 0;
-  Parameters::screen_width = 0;
-  Parameters::screen_height = 0;
-  Parameters::loop_count = 1;
-  Parameters::delay_each_action = 0;
-  Parameters::loop_bind = NULL;
-  Parameters::loop_bind_toggle = NULL;
-  Parameters::end_script = VK_F5;
-}
-
 
 std::vector<std::string> split_string(char delim, std::string input_string)
 {
@@ -75,6 +51,7 @@ unsigned int GetMouseClickAction(const std::string& value)
 
 typedef bool(*ArgParseFunc)(const std::vector<std::string>&);
 
+#ifdef _WIN32
 bool ParseWindowOrigin(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 2)
@@ -99,6 +76,7 @@ bool ParseWindowOrigin(const std::vector<std::string>& tokens)
     return false;
   }
 }
+#endif
 
 bool ParseOffsetOrigin(const std::vector<std::string>& tokens)
 {
@@ -177,6 +155,7 @@ bool ParseLoopCount(const std::vector<std::string>& tokens)
   return true;
 }
 
+#ifdef _WIN32
 bool ParseScreenSize(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 3)
@@ -195,7 +174,9 @@ bool ParseScreenSize(const std::vector<std::string>& tokens)
   Parameters::screen_height = static_cast<unsigned int>(height);
   return true;
 }
+#endif
 
+#ifdef _WIN32
 bool ParseMouseColor(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 5)
@@ -220,6 +201,7 @@ bool ParseMouseColor(const std::vector<std::string>& tokens)
   action_vector.push_back(new MouseAction(Color(r, g, b), click));
   return true;
 }
+#endif
 
 bool ParseMouseRelative(const std::vector<std::string>& tokens)
 {
@@ -243,6 +225,7 @@ bool ParseMouseRelative(const std::vector<std::string>& tokens)
   return true;
 }
 
+#ifdef _WIN32
 bool ParseLoopBind(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 2)
@@ -253,7 +236,9 @@ bool ParseLoopBind(const std::vector<std::string>& tokens)
   Parameters::loop_bind = std::stoi(tokens.at(1), 0, 16);
   return true;
 }
+#endif
 
+#ifdef _WIN32
 bool ParseLoopBindToggle(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 2)
@@ -264,7 +249,9 @@ bool ParseLoopBindToggle(const std::vector<std::string>& tokens)
   Parameters::loop_bind_toggle = std::stoi(tokens.at(1), 0, 16);
   return true;
 }
+#endif 
 
+#ifdef _WIN32
 bool ParseEndScript(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 2)
@@ -275,21 +262,25 @@ bool ParseEndScript(const std::vector<std::string>& tokens)
   Parameters::end_script = std::stoi(tokens.at(1), 0, 16);
   return true;
 }
+#endif
 
 std::map<std::string, ArgParseFunc> script_args =
 {
-  {"WINDOW_ORIGIN", ParseWindowOrigin},
+#ifdef _WIN32
+  {"WINDOW_ORIGIN", ParseWindowOrigin}, //WIN32
+  {"SCREEN_SIZE", ParseScreenSize}, //WIN32
+  {"END_SCRIPT", ParseEndScript}, //WIN32
+  {"LOOP_BIND", ParseLoopBind}, //WIN32
+  {"LOOP_COUNT", ParseLoopCount}, //WIN32
+  {"MOUSE_COLOR", ParseMouseColor}, //WIN32
+  {"LOOP_BIND_TOGGLE", ParseLoopBindToggle}, //WIN32
+#endif
   {"OFFSET_ORIGIN", ParseOffsetOrigin},
   {"MOUSE", ParseMouse},
   {"MOUSE_RELATIVE", ParseMouseRelative},
-  {"MOUSE_COLOR", ParseMouseColor},
-  {"LOOP_BIND_TOGGLE", ParseLoopBindToggle},
   {"DELAY", ParseDelay},
   {"DELAY_EACH_ACTION", ParseDelay},
-  {"SCREEN_SIZE", ParseScreenSize},
-  {"END_SCRIPT", ParseEndScript},
-  {"LOOP_BIND", ParseLoopBind},
-  {"LOOP_COUNT", ParseLoopCount},
+
 };
 
 bool ProcessScriptFile(const std::string& filename)

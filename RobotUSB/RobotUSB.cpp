@@ -1,5 +1,4 @@
 #include <iostream>
-#include "ScriptParse.h"
 #include "Action.h"
 #include <thread>
 #include <string>
@@ -8,10 +7,15 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
+#include <Windows.h>
+#include "ScriptParse.h"
+extern "C"
+{
+#include "usb.h"
+}
 
 #define SERIAL_BUFFER_SIZE 16
 #define MOUSE_SPEED 2
-#pragma comment (lib, "SetupAPI")
 
 typedef bool(*ArgParseFunc)(const std::vector<std::string>&);
 bool ParseWindowOrigin(const std::vector<std::string>&);
@@ -32,99 +36,60 @@ void ResetProgram()
   ResetParameters();
 }
 
-void ThreadCOMReader(const HANDLE&);
-void ThreadCOMWriter(const HANDLE&);
 void InterruptThread();
 bool ProcessScriptFile(const std::string&, std::vector<IOAction*>&);
 std::vector<std::string> split_string(char, std::string);
 
 int main()
 {
-  printf("RobotUSB Version 4 | Aleksander Krimsky - www.krimsky.net\n");
+  printf("RobotUSB Version 5 | Aleksander Krimsky - www.krimsky.net\n");
 
-  //Adapted from Jeffreys on StackOverflow
-  //https://stackoverflow.com/questions/58030553/
-
-  HDEVINFO hDevInfo;
-  SP_DEVINFO_DATA DeviceInfoData = { sizeof(DeviceInfoData) };
-  // get device class information handle
-  hDevInfo = SetupDiGetClassDevs(&GUID_DEVCLASS_PORTS, 0, 0, DIGCF_PRESENT);
-  if (hDevInfo == INVALID_HANDLE_VALUE)
+  struct SerialById* ids = new struct SerialById[MAX_SERIAL_DEVICES];
+  size_t count = get_devices(ids);
+  for (size_t i = 0; i < count; ++i)
   {
-    printf("Failed to find COM ports.\n");
-    return 0;
+    printf("[%02d] %32s = %s\n", i, ids[i].id, ids[i].path);
   }
 
-  for (int i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &DeviceInfoData); i++)
-  {
-    DWORD DataT;
-    char friendly_name[64] = { 0 };
-
-    if (!SetupDiGetDeviceRegistryPropertyA(hDevInfo, &DeviceInfoData,
-      SPDRP_FRIENDLYNAME, &DataT, (PBYTE)friendly_name, sizeof(friendly_name), NULL))
-    {
-      continue;
-    }
-
-    friendly_name[63] = 0;
-    printf("%s\n", friendly_name);
-  }
 
   enter_port:
-  printf("\nPlease enter the COM port: ");
+  printf("\nPlease enter your port selection: ");
   int port;
   std::cin >> port;
   printf("\n");
-  if (std::cin.fail() || port < 0 || port > 256)
+  if (std::cin.fail() || port < 0 || port > count)
   {
-    printf("Invalid COM port: %d\n", port);
+    printf("Invalid selection: %d\n", port);
     goto enter_port;
   }
-  std::wstring pcCommPort = L"\\\\.\\COM";
-  pcCommPort += std::to_wstring(port);
-  HANDLE hCom = INVALID_HANDLE_VALUE;
-  printf("Waiting for port to open on COM%d...\n", port);
-  for(int i = 0; i < 6; ++i)
+  std::string cCommPort = "\\\\.\\";
+  cCommPort.append(std::string(ids[port].path));
+
+  //std::wstring pcCommPort = L"\\\\.\\COM";
+ // pcCommPort += std::to_wstring(ids[i]);
+
+  void* device_id = (void*) -1;
+  printf("Waiting for port to open on %s...\n", cCommPort.c_str());
+  for (int i = 0; i < 6; ++i)
   {
     Sleep(500);
-    hCom = CreateFileW(pcCommPort.c_str(),
-      GENERIC_READ | GENERIC_WRITE,
-      0, NULL, OPEN_EXISTING, 0, NULL);
-    if (hCom != INVALID_HANDLE_VALUE)
-    {
+    device_id = sd_open(cCommPort.c_str());
+    if ((int)device_id > -1)
       break;
-    }
   }
 
-  if (hCom == INVALID_HANDLE_VALUE)
+  if ((int)device_id == -1)
   {
-    printf("Failed to open port on COM%d\n", port);
+    printf("Failed to open port %s\n", ids[port].path);
     goto enter_port;
   }
 
-  printf("Opened port on COM%d, setting CommState.\n", port);
+  printf("Opened port %s, configuring...\n", ids[port].path);
+  struct SerialSettings settings = { 0 };
+  if (sd_config(device_id, settings) != 0)
+    return 1;
 
-  DCB dcb;
-  SecureZeroMemory(&dcb, sizeof(DCB));
-  dcb.DCBlength = sizeof(DCB);
-  if (!GetCommState(hCom, &dcb))
-  {
-    printf("GetCommState failed with error %d.\n", GetLastError());
-    return 2;
-  }
-
-  dcb.BaudRate = CBR_115200;
-  dcb.ByteSize = 8;
-  dcb.Parity = NOPARITY;
-  dcb.StopBits = ONESTOPBIT;
-
-  if (!SetCommState(hCom, &dcb))
-  {
-    printf("SetCommState failed with error %d.\n", GetLastError());
-    return 3;
-  }
-
-  printf("Communication has been established!\n");
+  printf("Port has been configured\n");
 
 program_main:
   ResetProgram();
@@ -138,8 +103,10 @@ program_main:
   } while (!ProcessScriptFile(filename));
 
 
+#ifdef _WIN32
   std::thread interrupt_thread(InterruptThread);
   interrupt_thread.detach();
+#endif
 
   while (!interrupt)
   {
@@ -178,7 +145,8 @@ program_main:
             }
           }
           std::string com_string = serial_action->GetCOMString();
-          WriteFile(hCom, com_string.c_str(), SERIAL_BUFFER_SIZE, bytes_written, NULL);
+          sd_write(device_id, com_string.c_str(), SERIAL_BUFFER_SIZE);
+          //WriteFile(hCom, com_string.c_str(), SERIAL_BUFFER_SIZE, bytes_written, NULL);
           std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
         }
         else if (action->type == IOAction::TYPE::DELAY)
@@ -203,10 +171,11 @@ program_main:
     }
   }
 
-  CloseHandle(hCom);
+  sd_close(device_id);
   printf("Program has ended!\n");
 }
 
+#ifdef _WIN32
 void InterruptThread()
 {
   while (!interrupt)
@@ -229,3 +198,4 @@ void InterruptThread()
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
+#endif
