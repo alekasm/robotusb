@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <fcntl.h>
 #include "usb.h"
 
 size_t get_devices(struct SerialById* ids)
@@ -54,4 +55,9 @@ size_t get_devices(struct SerialById* ids)
 	}
 	closedir(dir);
 	return device_count;
+}
+
+int sd_open(const char* device)
+{
+	return open(device, O_RDWR | O_NOCTTY);
 }

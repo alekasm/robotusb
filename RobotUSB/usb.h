@@ -18,7 +18,7 @@ struct SerialSettings
 };
 
 size_t get_devices(struct SerialById*);
-void* sd_open(const char* device);
-int sd_config(void* device, struct SerialSettings);
-int sd_write(void* device, const char* buf, size_t size);
-void sd_close(void* device);
+int sd_open(const char* device);
+int sd_config(int device, struct SerialSettings);
+int sd_write(int device, const char* buf, size_t size);
+void sd_close(int device);
