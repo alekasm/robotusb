@@ -70,18 +70,18 @@ size_t get_devices(struct SerialById* ids)
   return device_count;
 }
 
-void* sd_open(const char* device)
+int sd_open(const char* device)
 {
   HANDLE hCom = INVALID_HANDLE_VALUE;
   hCom = CreateFileA(device,
     GENERIC_READ | GENERIC_WRITE,
     0, NULL, OPEN_EXISTING, 0, NULL);
   if (hCom == INVALID_HANDLE_VALUE)
-    return (void*) -1;
-  return hCom;
+    return -1;
+  return (int)hCom;
 }
 
-int sd_config(void* device_id, struct SerialSettings settings)
+int sd_config(int device_id, struct SerialSettings settings)
 {
   HANDLE hCom = (HANDLE)device_id;
   DCB dcb;
@@ -107,16 +107,16 @@ int sd_config(void* device_id, struct SerialSettings settings)
   return 0;
 }
 
-int sd_write(void* device, char* buf, size_t size)
+int sd_write(int device, char* buf, size_t size)
 {
   DWORD written;
-  WriteFile(device, buf, size, &written, NULL);
+  WriteFile((HANDLE)device, buf, size, &written, NULL);
   return written;
 }
 
-void sd_close(void* device)
+void sd_close(int device)
 {
-  if ((int)device > -1)
+  if (device > -1)
   {
     CloseHandle((HANDLE)device);
   }

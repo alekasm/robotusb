@@ -68,7 +68,7 @@ int main()
   //std::wstring pcCommPort = L"\\\\.\\COM";
  // pcCommPort += std::to_wstring(ids[i]);
 
-  void* device_id = (void*) -1;
+  int device_id = -1;
   printf("Waiting for port to open on %s...\n", cCommPort.c_str());
   for (int i = 0; i < 6; ++i)
   {
