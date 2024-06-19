@@ -4,7 +4,7 @@
 #include <map>
 #include <fstream>
 #include <iostream>
-#include <Windows.h>
+//#include <Windows.h>
 #include "Action.h"
 #include "parameters.h"
 //https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
@@ -221,7 +221,7 @@ bool ParseMouseRelative(const std::vector<std::string>& tokens)
   int y = atoi(tokens.at(2).c_str());
   unsigned int ux = static_cast<unsigned int>(x);
   unsigned int uy = static_cast<unsigned int>(y);
-  action_vector.push_back(new MouseAction(ux, uy, click, true));
+  action_vector.push_back(new MouseAction(ux, uy, click));
   return true;
 }
 
@@ -274,24 +274,21 @@ std::map<std::string, ArgParseFunc> script_args =
   {"LOOP_COUNT", ParseLoopCount}, //WIN32
   {"MOUSE_COLOR", ParseMouseColor}, //WIN32
   {"LOOP_BIND_TOGGLE", ParseLoopBindToggle}, //WIN32
+  {"MOUSE", ParseMouse},
 #endif
   {"OFFSET_ORIGIN", ParseOffsetOrigin},
-  {"MOUSE", ParseMouse},
   {"MOUSE_RELATIVE", ParseMouseRelative},
   {"DELAY", ParseDelay},
   {"DELAY_EACH_ACTION", ParseDelay},
-
 };
 
 bool ProcessScriptFile(const std::string& filename)
 {
-  RECT screen;
-  GetWindowRect(GetDesktopWindow(), &screen);
-  Parameters::screen_width = screen.right;
-  Parameters::screen_height = screen.bottom;
+
   std::ifstream file_stream(filename);
   if (!file_stream.good())
   {
+    perror("test1");
     printf("Could not open: %s\n", filename.c_str());
     return false;
   }
@@ -311,10 +308,11 @@ bool ProcessScriptFile(const std::string& filename)
     }
     else
     {
-      return false;
+      printf("Skipping token \"%s\"\n", key.c_str());
     }
   }
-  printf("Added %d actions\n", action_vector.size());
+  printf("Added %lu actions\n", action_vector.size());
+  /*
   printf("Calculated origin at: %d, %d\n", Parameters::origin_x, Parameters::origin_y);
   printf("Looping %d times\n", Parameters::loop_count);
   printf("Screen Width: %d, Screen Height: %d\n", Parameters::screen_width, Parameters::screen_height);
@@ -327,5 +325,6 @@ bool ProcessScriptFile(const std::string& filename)
       printf("Script loop bind can be toggled with Virtual Key: 0x%x\n", Parameters::loop_bind_toggle);
     }
   }
-  return true;
+  */
+  return !action_vector.empty();
 }

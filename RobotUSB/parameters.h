@@ -1,5 +1,15 @@
 #pragma once
+#ifdef _WIN32
 #include <Windows.h>
+void InitializeWindowsParameters()
+{
+    RECT screen;
+    GetWindowRect(GetDesktopWindow(), &screen);
+    Parameters::screen_width = screen.right;
+    Parameters::screen_height = screen.bottom;
+}
+#endif
+
 namespace Parameters
 {
   int origin_x = 0;
@@ -8,9 +18,11 @@ namespace Parameters
   unsigned int screen_height = 0;
   unsigned int loop_count = 1;
   unsigned int delay_each_action = 0;
+  #ifdef _WIN32
   DWORD loop_bind = NULL;
   DWORD loop_bind_toggle = NULL;
   DWORD end_script = VK_F5;
+  #endif
 }
 
 void ResetParameters()
@@ -21,7 +33,9 @@ void ResetParameters()
   Parameters::screen_height = 0;
   Parameters::loop_count = 1;
   Parameters::delay_each_action = 0;
+  #ifdef _WIN32
   Parameters::loop_bind = NULL;
   Parameters::loop_bind_toggle = NULL;
   Parameters::end_script = VK_F5;
+  #endif
 }

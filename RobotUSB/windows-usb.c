@@ -54,13 +54,14 @@ size_t get_devices(struct SerialById* ids)
 
     size_t path_len = cbData + 1;
     size_t id_len = strlen(buffer) + 1;
-    const char* path = (const char*)malloc(path_len);
+    const char* path = (const char*)malloc(path_len + 4);
     const char* id = (const char*)malloc(id_len);
     if (path == NULL || id == NULL)
       continue;
     memset(path, 0, path_len);
     memset(id, 0, id_len);
-    memcpy(path, query_buf, path_len);
+    memcpy(path, "\\\\.\\", 4);
+    memcpy(&path[4], query_buf, path_len);
     memcpy(id, buffer, id_len);
     ids[device_count].path = path;
     ids[device_count].id = id;

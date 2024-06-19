@@ -7,12 +7,11 @@
 #include <fstream>
 #include <algorithm>
 #include <map>
-#include <Windows.h>
+//#include <Windows.h>
 #include "ScriptParse.h"
-extern "C"
-{
-#include "usb.h"
-}
+//extern "C" {
+    #include "usb.h"
+//}
 
 #define SERIAL_BUFFER_SIZE 16
 #define MOUSE_SPEED 2
@@ -48,7 +47,7 @@ int main()
   size_t count = get_devices(ids);
   for (size_t i = 0; i < count; ++i)
   {
-    printf("[%02d] %32s = %s\n", i, ids[i].id, ids[i].path);
+    printf("[%02lu] %24s = %s\n", i, ids[i].id, ids[i].path);
   }
 
 
@@ -57,22 +56,17 @@ int main()
   int port;
   std::cin >> port;
   printf("\n");
-  if (std::cin.fail() || port < 0 || port > count)
+  if (std::cin.fail() || port < 0 || port > count - 1)
   {
     printf("Invalid selection: %d\n", port);
     goto enter_port;
   }
-  std::string cCommPort = "\\\\.\\";
-  cCommPort.append(std::string(ids[port].path));
-
-  //std::wstring pcCommPort = L"\\\\.\\COM";
- // pcCommPort += std::to_wstring(ids[i]);
-
+  std::string cCommPort(ids[port].path);
   int device_id = -1;
   printf("Waiting for port to open on %s...\n", cCommPort.c_str());
   for (int i = 0; i < 6; ++i)
   {
-    Sleep(500);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     device_id = sd_open(cCommPort.c_str());
     if ((int)device_id > -1)
       break;
@@ -134,8 +128,8 @@ program_main:
         if (action->type == IOAction::TYPE::SERIAL)
         {
           SerialAction* serial_action = static_cast<SerialAction*>(action);
-          LPDWORD bytes_written = 0;
           unsigned int sleep_time = 1 + Parameters::delay_each_action;
+          #ifdef _WIN32
           if (serial_action->serial_type == SerialAction::SERIAL_TYPE::MOUSE)
           {
             MouseAction* mouse_action = static_cast<MouseAction*>(serial_action);
@@ -144,6 +138,7 @@ program_main:
               sleep_time += mouse_action->GetDestinationDistance() * MOUSE_SPEED;
             }
           }
+          #endif
           std::string com_string = serial_action->GetCOMString();
           sd_write(device_id, com_string.c_str(), SERIAL_BUFFER_SIZE);
           //WriteFile(hCom, com_string.c_str(), SERIAL_BUFFER_SIZE, bytes_written, NULL);
@@ -165,7 +160,7 @@ program_main:
   if (!std::cin.fail() && input_command.size())
   {
     char input = input_command.at(0);
-    if (input == 0x52 || input == 0x72)
+    if (input == 'r' || input == 'R')
     {
       goto program_main;
     }

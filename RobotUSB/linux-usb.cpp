@@ -46,7 +46,7 @@ size_t get_devices(struct SerialById *ids)
         char *path = realpath(de->d_name, NULL);
         if (path != NULL)
         {
-            printf("Name: %s, Path: %s\n", de->d_name, path);
+            //printf("Name: %s, Path: %s\n", de->d_name, path);
             size_t id_len = strlen(de->d_name);
             char* id_copy = (char*)malloc(id_len + 1);
             memset(id_copy, 0, id_len); // null at end
@@ -54,6 +54,7 @@ size_t get_devices(struct SerialById *ids)
             ids[device_count].id = id_copy;
             ids[device_count].path = path;
             ++device_count;
+            //free(path);
             path = NULL;
         }
     }
