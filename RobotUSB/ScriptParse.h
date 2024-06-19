@@ -90,7 +90,7 @@ bool ParseOffsetOrigin(const std::vector<std::string>& tokens)
   Parameters::origin_y += atoi(tokens.at(2).c_str());
   return true;
 }
-
+#ifdef _WIN32
 bool ParseMouse(const std::vector<std::string>& tokens)
 {
   if (tokens.size() != 4)
@@ -117,6 +117,7 @@ bool ParseMouse(const std::vector<std::string>& tokens)
   action_vector.push_back(new MouseAbsoluteAction(ux, uy, click));
   return true;
 }
+#endif
 
 bool ParseDelay(const std::vector<std::string>& tokens)
 {
