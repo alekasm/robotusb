@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include <string.h>
+#include <string>
 #include "parameters.h"
 
 struct IOAction
@@ -16,11 +16,14 @@ struct SerialAction : IOAction
   virtual std::string GetCOMString() = 0;
 };
 
+enum MouseActionType { MAT_RELATIVE, MAT_ABSOLUTE, MAT_COLOR };
+
 struct MouseAction : public SerialAction
 {
   int32_t x = 0;
   int32_t y = 0;
   uint32_t click = 0;
+  enum MouseActionType mouse_type = MAT_RELATIVE;
   MouseAction(int32_t x, int32_t y, unsigned int click)
   {
     this->x = x + Parameters::origin_x;

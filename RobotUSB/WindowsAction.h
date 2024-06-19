@@ -58,64 +58,82 @@ BOOL GetColorLocation(Color color, LPPOINT point)
   return FALSE;
 }
 
+unsigned int GetDestinationDistance(MouseAction* action)
+{
+  POINT lpPoint;
+  GetCursorPos(&lpPoint);
+  int dx = action->x - lpPoint.x;
+  int dy = action->y - lpPoint.y;
+  double dist = std::sqrt(std::pow(dx, 2) + std::pow(dy, 2));
+  return static_cast<unsigned int>(std::abs(dist));
+}
+
 struct MouseColorAction : public MouseAction
 {
-    Color color;
-    MouseColorAction(Color color, unsigned int click)
-    {
-        this->color = color;
-        this->click = click;
-        this->serial_type = SerialAction::SERIAL_TYPE::MOUSE;
-        this->type = IOAction::TYPE::SERIAL;
-    }
+  Color color;
+  MouseColorAction(Color color, unsigned int click) : MouseAction(0, 0, click)
+  {
+    this->color = color;
+    this->click = click;
+    this->serial_type = SerialAction::SERIAL_TYPE::MOUSE;
+    this->type = IOAction::TYPE::SERIAL;
+    mouse_type = MAT_ABSOLUTE;
+  }
 
-    virtual std::string GetCOMString() override
+  virtual std::string GetCOMString() override
+  {
+    std::string serial_write = "0,";
+    POINT point;
+    int dx, dy;
+    int dclick = click;
+    POINT lpPoint;
+    GetCursorPos(&lpPoint);
+    if (!GetColorLocation(color, &point))
     {
-        std::string serial_write = "0,";
-        POINT point;
-        if (!GetColorLocation(color, &point))
-        {
-            printf("Failed to find color value, doing nothing\n");
-            dx = 0;
-            dy = 0;
-            dclick = 0;
-        }
-        else
-        {
-            printf("Found color value at: %d, %d\n", point.x, point.y);
-            dx = point.x - lpPoint.x;
-            dy = point.y - lpPoint.y;
-        }
-        serial_write += std::to_string(dx) + ",";
-        serial_write += std::to_string(dy) + ",";
-        serial_write += std::to_string(dclick);
-        return serial_write;
+      printf("Failed to find color value, doing nothing\n");
+      dx = 0;
+      dy = 0;
+      dclick = 0;
     }
-}
+    else
+    {
+      printf("Found color value at: %d, %d\n", point.x, point.y);
+      dx = point.x - lpPoint.x;
+      dy = point.y - lpPoint.y;
+    }
+    serial_write += std::to_string(dx) + ",";
+    serial_write += std::to_string(dy) + ",";
+    serial_write += std::to_string(dclick);
+    return serial_write;
+  }
+};
+
 struct MouseAbsoluteAction : public MouseAction
 {
-    MouseAbsoluteAction(int32_t x, int32_t y, unsigned int click)
-    {
-        this->x = x + Parameters::origin_x;
-        this->y = y + Parameters::origin_y;
-        this->click = click;
-        this->serial_type = SerialAction::SERIAL_TYPE::MOUSE;
-        this->type = IOAction::TYPE::SERIAL;
-    }
-    
-    virtual std::string GetCOMString() override
-    {
-        POINT lpPoint;
-        GetCursorPos(&lpPoint);
-        std::string serial_write = "0,";
-        int dx, dy;
-        int dclick = click;
-        dx = x - lpPoint.x;
-        dy = y - lpPoint.y;
-        serial_write += std::to_string(dx) + ",";
-        serial_write += std::to_string(dy) + ",";
-        serial_write += std::to_string(dclick);
-        return serial_write;
+  MouseAbsoluteAction(int32_t x, int32_t y, unsigned int click) : MouseAction(x, y, click)
+  {
+    this->x = x + Parameters::origin_x;
+    this->y = y + Parameters::origin_y;
+    this->click = click;
+    this->serial_type = SerialAction::SERIAL_TYPE::MOUSE;
+    this->type = IOAction::TYPE::SERIAL;
+    mouse_type = MAT_ABSOLUTE;
+  }
 
-}
+  virtual std::string GetCOMString() override
+  {
+    POINT lpPoint;
+    GetCursorPos(&lpPoint);
+    std::string serial_write = "0,";
+    int dx, dy;
+    int dclick = click;
+    dx = x - lpPoint.x;
+    dy = y - lpPoint.y;
+    serial_write += std::to_string(dx) + ",";
+    serial_write += std::to_string(dy) + ",";
+    serial_write += std::to_string(dclick);
+    return serial_write;
+
+  }
+};
 #endif

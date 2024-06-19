@@ -1,13 +1,6 @@
 #pragma once
 #ifdef _WIN32
 #include <Windows.h>
-void InitializeWindowsParameters()
-{
-    RECT screen;
-    GetWindowRect(GetDesktopWindow(), &screen);
-    Parameters::screen_width = screen.right;
-    Parameters::screen_height = screen.bottom;
-}
 #endif
 
 namespace Parameters
@@ -39,3 +32,13 @@ void ResetParameters()
   Parameters::end_script = VK_F5;
   #endif
 }
+
+#ifdef _WIN32
+void InitializeWindowsParameters()
+{
+  RECT screen;
+  GetWindowRect(GetDesktopWindow(), &screen);
+  Parameters::screen_width = screen.right;
+  Parameters::screen_height = screen.bottom;
+}
+#endif

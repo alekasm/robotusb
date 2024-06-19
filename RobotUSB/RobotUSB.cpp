@@ -9,9 +9,13 @@
 #include <map>
 //#include <Windows.h>
 #include "ScriptParse.h"
-//extern "C" {
+#ifdef _WIN32
+extern "C" {
+#endif
     #include "usb.h"
-//}
+#ifdef _WIN32
+}
+#endif
 
 #define SERIAL_BUFFER_SIZE 16
 #define MOUSE_SPEED 2
@@ -133,9 +137,9 @@ program_main:
           if (serial_action->serial_type == SerialAction::SERIAL_TYPE::MOUSE)
           {
             MouseAction* mouse_action = static_cast<MouseAction*>(serial_action);
-            if (!mouse_action->relative)
+            if (mouse_action->mouse_type == MAT_ABSOLUTE)
             {
-              sleep_time += mouse_action->GetDestinationDistance() * MOUSE_SPEED;
+              sleep_time += GetDestinationDistance(mouse_action) * MOUSE_SPEED;
             }
           }
           #endif

@@ -3,12 +3,13 @@
 #include <string>
 #include <map>
 #include <fstream>
-#include <iostream>
-//#include <Windows.h>
 #include "Action.h"
 #include "parameters.h"
-//https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 
+#ifdef _WIN32
+#include <Windows.h>
+#include "WindowsAction.h"
+#endif
 
 
 namespace
@@ -113,7 +114,7 @@ bool ParseMouse(const std::vector<std::string>& tokens)
   }
   unsigned int ux = static_cast<unsigned int>(x);
   unsigned int uy = static_cast<unsigned int>(y);
-  action_vector.push_back(new MouseAction(ux, uy, click));
+  action_vector.push_back(new MouseAbsoluteAction(ux, uy, click));
   return true;
 }
 
@@ -198,7 +199,7 @@ bool ParseMouseColor(const std::vector<std::string>& tokens)
   {
     return false;
   }
-  action_vector.push_back(new MouseAction(Color(r, g, b), click));
+  action_vector.push_back(new MouseColorAction(Color(r, g, b), click));
   return true;
 }
 #endif
